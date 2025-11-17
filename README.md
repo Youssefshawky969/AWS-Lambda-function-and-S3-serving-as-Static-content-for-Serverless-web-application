@@ -1,20 +1,52 @@
 # Serverless Travel App
+[section:overview]
+
+### Project Overview:
+This serverless travel assistant app enables users to input a city and receive live weather data and popular tourist destinations. It is fully deployed on AWS using Terraform for Infrastructure as Code (IaC).
+To build a fully serverless and globally accessible application that allows users to input a destination and receive live weather data and top tourist places. Uses static website hosting for frontend, with a dynamic backend powered by AWS Lambda and API Gateway, and secures content delivery using CloudFront and enforces CORS policies for browser-based communication.
+
+[section:architecture overview]
+
+### Architecture Overveiw
+
+**Digram**
 
 ![Animation](https://github.com/user-attachments/assets/ee5dec18-5d1e-40aa-9931-97def6bbd785)
 
+**Components**
 
- ### Project Overview:
-   This serverless travel assistant app enables users to input a city and receive live weather data and popular tourist destinations. It is fully deployed on AWS using Terraform for Infrastructure as Code (IaC).
- ### Purpose: 
- To build a fully serverless and globally accessible application that allows users to input a destination and receive live weather data and top tourist places. Uses static website hosting for frontend, with a dynamic backend powered by AWS Lambda and API Gateway, and secures content delivery using CloudFront and enforces CORS policies for browser-based communication.
-
-## Steps
-### Backend:
-   #### Lambda Function
+**Backend:**
+   ##### Lambda Function
 - AWS Lambda hosts the Python Flask backend that gets geo-coordinates using OpenStreetMap, fetches weather from Open-Meteo, then retrieves tourist places from Google Places API.
 - Flask app is converted into an AWS Lambda-compatible handler using Mangum, and dependencies ```(flask, requests, flask-cors, etc.)``` are packaged with the app ``` places.py ```
 
-   * This block ```Lambda Function``` deploys ```places.zip``` using ```python3.11```, defining handler, timeout, and source hash.
+**Frontend:**
+##### S3 serving as static content
+- Creates a bucket for frontend static files, enables S3 to serve index.html as the root, restricts public ACLs and policies for security, then grants CloudFront OAC permission to access bucket content.
+- S3 for stating content
+
+##### CloudFront
+- CloudFront OAC generates Origin Access Control for secure S3 access.
+  
+[section:project structure]
+
+### Project Structure
+- `provider.tf`
+- `lambdafunction.tf`
+- `static-website.tf`
+- `iampolicy.tf`
+- `cloudfront.tf`
+- `apigateway.tf`
+- `output.tf`
+- `index.html`
+- `places.py`
+
+[section:implementing steps]
+
+### Implementing Steps
+
+   * In this block in `lambdafunction.tf` deploys `places.zip` using `python3.11`, defining handler, timeout, and source hash.
+
 ```
      resource "aws_lambda_function" "flask_lambda" {
   filename         = "places.zip"
@@ -52,6 +84,7 @@ resource "aws_iam_role" "lambda_role" {
 
 
 * Policy Attachment grants Lambda basic execution permissions with AWS-managed policy.
+
 ```
 resource "aws_iam_policy_attachment" "lambda_basic_execution" {
   name       = "lambda_basic_execution"
@@ -59,14 +92,18 @@ resource "aws_iam_policy_attachment" "lambda_basic_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 ```
+
 * API Gateway declares REST API with name and description.
+
 ```
 resource "aws_api_gateway_rest_api" "flask_lambda_api" {
   name        = "flask_lambda_api"
   description = "API Gateway for Flask App"
 }
 ```
+
 *  Defines /get_city_info path within API Gateway.
+
 ```
 resource "aws_api_gateway_resource" "resource" {
   rest_api_id = aws_api_gateway_rest_api.flask_lambda_api.id
@@ -146,11 +183,6 @@ resource "aws_lambda_permission" "apigateway" {
 ```
 ![image](https://github.com/user-attachments/assets/f1669743-45d2-46e2-a7dd-e8e506f4c238)
 
-
-### Frontend
-
-#### s3
-- Creates a bucket for frontend static files, enables S3 to serve index.html as the root, restricts public ACLs and policies for security, then grants CloudFront OAC permission to access bucket content.
 
 * Creates a bucket for frontend static files.
 ```
@@ -254,8 +286,7 @@ policy = jsonencode({
   }
   ```
 
-#### CloudFront
-* CloudFront OAC generates Origin Access Control for secure S3 access.
+* Setting Cloudfront to the origin access control
 
 ```
 resource "aws_cloudfront_origin_access_control" "frontend_oac" {
@@ -327,24 +358,33 @@ resource "aws_cloudfront_origin_access_control" "frontend_oac" {
       - CloudFront configuration
       - Output blocks
 * Make sure your AWS credentials are configured
+
   ```
   aws configure
   ```
-* Run this in the folder where your .tf files are located
+  
+* Run this in the folder where your `.tf` files are located
+  
   ```
   terraform init
   ```
+  
 * Before applying, it's best to check what will be created
+
   ```
   terraform plan
   ```
+  
 * Deploy your resources
+
   ```
   terraform apply -auto-approve
   ```
+  
 * After a successful deployment, you’ll see values like:
   - API Gateway URL
   - CloudFront website URL
+
     ```
     Outputs:
 
@@ -357,6 +397,7 @@ resource "aws_cloudfront_origin_access_control" "frontend_oac" {
 ![image](https://github.com/user-attachments/assets/44b8e8d6-7a2e-4a66-b21b-27da1eb3d4b1)
 
 * To clean everything up
+
   ```
   terraform destroy
   ```
